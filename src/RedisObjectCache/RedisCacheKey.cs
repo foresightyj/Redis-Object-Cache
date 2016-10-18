@@ -13,10 +13,10 @@ namespace RedisObjectCache
         internal string StateKey { get; set; }
 
         internal RedisCacheKey(String key)
-        {    
+        {
             Key = key;
-            StateKey = String.Format("{0}_STATE", Key);
+            StateKey = String.Format("{0}:STATE", Key);
             Hash = key.GetHashCode();
-        }    
+        }
     }
 }

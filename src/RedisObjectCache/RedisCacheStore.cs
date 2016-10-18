@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using StackExchange.Redis;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using StackExchange.Redis;
 
 namespace RedisObjectCache
 {
@@ -90,7 +90,7 @@ namespace RedisObjectCache
             MethodInfo method = typeof(JsonConvert).GetMethods().FirstOrDefault(m => m.Name == "DeserializeObject" && m.IsGenericMethod);
             var t = Type.GetType(typeName);
             MethodInfo genericMethod = method.MakeGenericMethod(t);
-            return genericMethod.Invoke(null, new object[]{ json }); // No target, no arguments
+            return genericMethod.Invoke(null, new object[] { json }); // No target, no arguments
         }
     }
 }
