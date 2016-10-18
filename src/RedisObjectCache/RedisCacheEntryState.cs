@@ -25,7 +25,6 @@ namespace RedisObjectCache
 
         internal RedisCacheEntryState()
         {
-            
         }
 
         internal RedisCacheEntryState(DateTimeOffset absExp,

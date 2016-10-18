@@ -1,12 +1,10 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using StackExchange.Redis;
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace RedisObjectCache
 {
@@ -85,12 +83,21 @@ namespace RedisObjectCache
             return state.UtcAbsoluteExpiration.Subtract(DateTime.UtcNow);
         }
 
+        private readonly MethodInfo _deserializeMethod = typeof(JsonConvert).GetMethods().FirstOrDefault(m => m.Name == "DeserializeObject" && m.IsGenericMethod);
+
+        private readonly ConcurrentDictionary<string, Func<string, object>> _genericMethods = new ConcurrentDictionary<string, Func<string, object>>();
+
         private object GetObjectFromString(string json, string typeName)
         {
-            MethodInfo method = typeof(JsonConvert).GetMethods().FirstOrDefault(m => m.Name == "DeserializeObject" && m.IsGenericMethod);
-            var t = Type.GetType(typeName);
-            MethodInfo genericMethod = method.MakeGenericMethod(t);
-            return genericMethod.Invoke(null, new object[] { json }); // No target, no arguments
+            Func<string, object> serializer;
+            if (!_genericMethods.TryGetValue(typeName, out serializer))
+            {
+                var t = Type.GetType(typeName);
+                var genericMethod = _deserializeMethod.MakeGenericMethod(t);
+                serializer = s => genericMethod.Invoke(null, new object[] { s }); // No target, no arguments
+                _genericMethods[typeName] = serializer;
+            }
+            return serializer(json);
         }
     }
 }
