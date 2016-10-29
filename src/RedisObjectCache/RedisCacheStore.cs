@@ -4,7 +4,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 
 namespace RedisObjectCache
 {
@@ -30,6 +29,14 @@ namespace RedisObjectCache
 
             var valueJson = JsonConvert.SerializeObject(entry.Value, _jsonSerializerSettings);
             var stateJson = JsonConvert.SerializeObject(entry.State, _jsonSerializerSettings);
+
+#if DEBUG
+
+            if (stateJson.Contains("AnonymousType"))
+            {
+                throw new Exception("在FHT，不允许将匿名类型的数据缓存在Redis里面，请建好一个合适的DTO");
+            }
+#endif
 
             _redisDatabase.StringSet(entry.Key, valueJson, ttl);
             _redisDatabase.StringSet(entry.StateKey, stateJson, ttl);
@@ -93,6 +100,17 @@ namespace RedisObjectCache
             if (!_genericMethods.TryGetValue(typeName, out serializer))
             {
                 var t = Type.GetType(typeName);
+#if DEBUG
+                if (typeName.Contains("AnonymousType"))
+                {
+                    throw new FhtCachingException(string.Format("在FHT，Redis的缓存中，不要使用匿名类型，请建立一个DTO。目前无法解析: {0}", typeName));
+                }
+#endif
+                if (t == null)
+                {
+                    throw new FhtCachingException(string.Format("无法找到类型: {0}", typeName));
+                }
+
                 var genericMethod = _deserializeMethod.MakeGenericMethod(t);
                 serializer = s => genericMethod.Invoke(null, new object[] { s }); // No target, no arguments
                 _genericMethods[typeName] = serializer;
